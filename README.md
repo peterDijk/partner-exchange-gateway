@@ -1,6 +1,24 @@
 # Partner Exchange Gateway
 
-A demo project to learn and practice C# language and the .NET framework.
-The gateway will accept information in a standardised secure made-up format, parse this and store this in events and a projection. Information is then shared to connected partners.
+A gateway interface that exchanges unit position and status updates between a fictional national system and fictional coalition partners.
+The gateway will accept information in a standardised made-up format, parse this and store this in events and a projection. Information is then shared to connected partners. Information can go both ways.
+The gateway will survive an unreliable partner system: it will have durable outbox, retries, per-partner circuit breaking, dead-lettering and replay, and recovery after restart.
 
-Work in progress
+This is fictional: nothing imitates or claims compliance with any real NATO standard, no real defence data, classification markings, or secrets are used.
+
+This is a demo project to learn and practice C#/.NET coming from Scala.
+
+> Work in progress
+
+### Roadmap:
+- [ ] setup of invented PXF format and its translators
+- [ ] event-sourced domain
+- [ ] event-store
+- [ ] gateway API
+- [ ] outbound delivery + fault-injecting partner simulator
+- [ ] fault tolerance (retries, circuit breaker, dead letters)
+- [ ] signed inbound + idempotency
+- [ ] restart recovery
+
+### How I built this
+Given this project outline, the implementation plan was made AI-assisted, including code snippets and examples. I wrote every line of code myself, and made sure I understood each component before moving on.
