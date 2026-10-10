@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PartnerExchange.Contracts/PartnerExchange.Contracts.csproj" />
+    <Project Path="src/PartnerExchange.Gateway/PartnerExchange.Gateway.csproj" />
+    <Project Path="src/PartnerExchange.Simulator/PartnerExchange.Simulator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PartnerExchange.Contracts.Tests/PartnerExchange.Contracts.Tests.csproj" />
+    <Project Path="tests/PartnerExchange.Gateway.Tests/PartnerExchange.Gateway.Tests.csproj" />
+  </Folder>
+</Solution>
