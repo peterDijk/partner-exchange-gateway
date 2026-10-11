@@ -1,25 +1,33 @@
 # Partner Exchange Gateway
 
-### Project outline
-A message gateway that translates and delivers reports between a fictional national system and fictional coalition partners.
-The gateway will accept information (unit position and status updates) in a standardised invented format, parse this and store this in events and a projection. Information is then shared to connected partners. Information can go both ways.
-The gateway will survive an unreliable partner system: it will have durable outbox, retries, per-partner circuit breaking, dead-lettering and replay, and recovery after restart.
+A small message gateway between a fictional national system and fictional coalition partners. It takes unit position and status reports, translates them to and from an invented format (PXF), stores them as events, and delivers them to partners that may be unreliable: retries, circuit breaking, dead letters, replay, recovery after a restart.
 
-This is fictional: nothing imitates or claims compliance with any real NATO standard, no real defence data, classification markings, or secrets are used.
+Everything here is made up. Nothing imitates or claims compliance with a real NATO standard, and there is no real defence data.
 
-This is a demo project to learn and practice C#/.NET coming from Scala.
+I'm building this to learn C#/.NET coming from Scala, and because the problems in it (format versions, lossy translation, delivery guarantees, partial failure) are ones I like.
 
-> Work in progress
+## Status
 
-### Roadmap:
-- [ ] setup of invented PXF format and its translators
+Work in progress:
+
+Roadmap:
+- [ ] PXF format and translators
 - [ ] event-sourced domain
-- [ ] event-store
+- [ ] event store
 - [ ] gateway API
 - [ ] outbound delivery + fault-injecting partner simulator
-- [ ] fault tolerance (retries, circuit breaker, dead letters)
-- [ ] signed inbound + idempotency
+- [ ] retries, circuit breaker, dead letters
+- [ ] signed inbound messages + idempotency
 - [ ] restart recovery
 
-### How I built this
-I wrote this project outline and created the implementation plan with AI assistance, including code snippets and examples. I wrote every line of code myself, and made sure I understood each component before moving on.
+## Running it
+
+`dotnet test` (needs the .NET 10 SDK).
+
+## Coming from Scala
+
+- using lock to prevent threads writing to concurrently to shared component state
+
+## How I built this
+
+I wrote the outline and an implementation plan with AI assistance, including code. I'm typing the code over milestone by milestone, asking AI to explain what I don't know, and running the tests at each step. Where I deviate from the plan, the commit message says so.
