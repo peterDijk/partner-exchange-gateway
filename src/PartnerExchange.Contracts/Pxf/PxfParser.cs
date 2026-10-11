@@ -38,9 +38,10 @@ public static partial class PxfParser
         }
 
         var header = ParseHeader(lines[1], problems);
-        // get unit
-        // get position
-        // get status
+        var unit = ParseUnit(lines[2], problems);
+        var position = ParsePosition(lines[3], problems);
+        var status = ParseStatus(lines[4], problems);
+        ParseTrailer(lines[5], lines[..5], problems);
     }
 
     private sealed record HeaderSegment(Guid MessageId, DateTimeOffset ObservedAt, string Originator);
@@ -94,6 +95,49 @@ public static partial class PxfParser
                 "Originator must be 1-8 chars of A-Z or 0-9.");
         
         return ok ? new HeaderSegment(messageId, observedAt, fields[2]) : null;
+    }
+
+    private static UnitSegment? ParseUnit(string line, List<PxfError> problems)
+    {
+        const int lineNo = 3;
+        var fields = Fields(line, lineNo, "U", 2, problems);
+        if (fields is null) return null;
+
+        var ok = Check(
+            UnitIdPattern().IsMatch(fields[0]),
+            problems,
+            lineNo,
+            "U.ID",
+            "Unit-id must be 1-16 chars of A-Z or 0-9") &
+            Check(
+                CallsignPattern().IsMatch(fields[1]),
+                problems,
+                lineNo,
+                "U.CALLSIGN",
+                "Callsign must be 1-8 chars of A- or 0-9");
+        
+        return ok ? new UnitSegment(fields[0], fields[1]) : null;
+    }
+
+    private static PositionSegment? ParsePosition(string line, List<PxfError> problems)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static StatusSegment? ParseStatus(string line, List<PxfError> problems)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static void ParseTrailer(string line, string[] bodyLines, List<PxfError> problems)
+    {
+        const int lineNo = 6;
+        var fields = Fields(line, lineNo, "Z", 1, problems);
+        if (fields is null) return;
+
+        var expected = PxfChecksum.Compute(
+            string.Concat(bodyLines.Select(l => l + "\n")));
+        Check(fields[0] == expected, problems, lineNo, "Z.CHECKSUM", $"Checksum mismatch: expected {expected}, got {fields[0]}.");
     }
 
     private static string[]? Fields(string line, int lineNo, string tag, int count, List<PxfError> problems)
