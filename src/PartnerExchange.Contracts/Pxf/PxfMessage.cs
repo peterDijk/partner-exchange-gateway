@@ -22,7 +22,7 @@ public sealed record PxfMessage(
     string Callsign,
     decimal Latitude,
     decimal Longitude,
-    int? AltitudeMeters,
+    int? AltitudeMetres,
     PxfStatus Status,
     char? Readiness);
 

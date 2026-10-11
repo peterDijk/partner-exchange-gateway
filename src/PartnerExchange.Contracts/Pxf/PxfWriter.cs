@@ -30,7 +30,7 @@ public static class PxfWriter
         return m.Version switch
         {
             PxfVersion.V1 => $"P {lat} {lon}",
-            PxfVersion.V2 => string.Create(Inv, $"P {lat} {lon} {Require(m.AltitudeMeters, "altitude"):0000}"),
+            PxfVersion.V2 => string.Create(Inv, $"P {lat} {lon} {Require(m.AltitudeMetres, "altitude"):0000}"),
             _ => throw new NotSupportedException($"Unsupported PXF version {m.Version}")
         };
     }
