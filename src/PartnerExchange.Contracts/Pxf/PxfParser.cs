@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -39,9 +40,20 @@ public static partial class PxfParser
 
         var header = ParseHeader(lines[1], problems);
         var unit = ParseUnit(lines[2], problems);
-        var position = ParsePosition(lines[3], problems);
-        var status = ParseStatus(lines[4], problems);
+        var position = ParsePosition(lines[3], version, problems);
+        var status = ParseStatus(lines[4], version, problems);
         ParseTrailer(lines[5], lines[..5], problems);
+
+        if (header is null || unit is null || position is null ||
+            status is null || problems.Count > 0) return false;
+        
+        message = new PxfMessage(
+            version, header.MessageId, header.ObservedAt, header.Originator,
+            unit.UnitId, unit.Callsign, position.Latitude, position.Longitude,
+            position.AltitudeMeters, status.Status, status.Readiness
+        );
+        
+        return true;
     }
 
     private sealed record HeaderSegment(Guid MessageId, DateTimeOffset ObservedAt, string Originator);
@@ -119,14 +131,80 @@ public static partial class PxfParser
         return ok ? new UnitSegment(fields[0], fields[1]) : null;
     }
 
-    private static PositionSegment? ParsePosition(string line, List<PxfError> problems)
+    private static PositionSegment? ParsePosition(string line, PxfVersion version, List<PxfError> problems)
     {
-        throw new NotImplementedException();
+        const int lineNo = 4;
+        var fields = Fields(line, lineNo, "P", version == PxfVersion.V1 ? 2 : 3, problems);
+        if (fields is null) return null;
+
+        decimal lat = 0, lon = 0;
+        int? altitude = null;
+
+        var ok = Check(
+            LatitudePattern().IsMatch(fields[0]) &&
+                TryDecimal(fields[0], out lat) &&
+                lat is >= -90m and <= 90m,
+            problems,
+            lineNo,
+            "P.LAT",
+            "Latitude must be like +12.34560 and within -90..90") &
+            Check(
+                LongitudePattern().IsMatch(fields[1]) &&
+                    TryDecimal(fields[1], out lon) &&
+                    lon is >= -180m and <= 180m,
+                problems,
+                lineNo,
+                "P.LON",
+                "Longitude must be like -045.67890 and within -180..180");
+        
+        if (version == PxfVersion.V2)
+        {
+            ok &= Check(
+                AltitudePattern().IsMatch(fields[2]),
+                problems,
+                lineNo,
+                "P.ALT",
+                "Altitude must be 4 digits (metres)"
+            );
+            if (ok) altitude = int.Parse(fields[2], CultureInfo.InvariantCulture);
+        }
+
+        return ok? new PositionSegment(lat, lon, altitude) : null;
     }
 
-    private static StatusSegment? ParseStatus(string line, List<PxfError> problems)
+    private static StatusSegment? ParseStatus(string line, PxfVersion version, List<PxfError> problems)
     {
-        throw new NotImplementedException();
+        const int lineNo = 5;
+        var fields = Fields(line, lineNo, "S", version == PxfVersion.V1 ? 1 : 2, problems);
+        if (fields is null) return null;
+
+        var status = version == PxfVersion.V1 ?
+            PxfCodes.Status.FromV1(fields[0]) :
+            PxfCodes.Status.FromV2(fields[0]);
+        var validStatus = Check(
+            status is not null,
+            problems, lineNo, "S.STATUS",
+            $"Unknown status '{fields[0]}' for PXF v{(int)version}");
+        
+        char? readiness = null;
+        var validReadiness = true;
+        
+        if (version == PxfVersion.V2)
+        {
+            var field = fields[1];
+            var ch = field is [>= 'A' and <= 'D'];
+            validReadiness = Check(
+                ch,
+                problems,
+                lineNo,
+                "S.READY",
+                "Readiness must be one letter A-D");
+            if (validReadiness) readiness = field[0];
+        }
+
+        return status is not null && validStatus && validReadiness ? 
+            new StatusSegment(status.Value, readiness) :
+            null;
     }
 
     private static void ParseTrailer(string line, string[] bodyLines, List<PxfError> problems)
@@ -153,6 +231,12 @@ public static partial class PxfParser
         if (!condition) problems.Add(new PxfError(line, code, message));
         return condition;
     }
+
+    private static bool TryDecimal(string s, out decimal value) =>
+        decimal.TryParse(s,
+            NumberStyles.AllowLeadingSign |
+            NumberStyles.AllowDecimalPoint,
+            CultureInfo.InvariantCulture, out value);
 
     [GeneratedRegex("^[A-Z0-9]{1,8}$")] private static partial Regex OriginatorPattern();
     [GeneratedRegex("^[A-Z0-9-]{1,16}$")] private static partial Regex UnitIdPattern();

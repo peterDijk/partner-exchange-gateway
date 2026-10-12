@@ -1,28 +1,3 @@
-# PXF - Partner Exchange Format (fictional)
-
-PXF is invented for this demo. It is not, and does not imitate, any real NATO or national standard.
-
-## Encoding
-- ACII only, max 1024 bytes
-- Exactly six lines, each terminated by LF. Readers also accept CRLF.
-- Fields are separated by exactly one space. No leading or trailing spaces.
-
-## Lines
-| # | Tag | Fields (v1) | Fields (v2) |
-|---|-----|-------------|-------------|
-| 1 | `PXF` | version `1` | version `2` |
-| 2 | `H` | message id, observed-at, originator | same
-| 3 | `U` | unit id, callsign | same
-| 4 | `P` | latitude, longitude | latitude, longitude, altitude
-| 5 | `S` | status (numeric) | status (letters), readiness
-| 6 | `Z` | checksum | same |
-
-## Fields
-| Field | Format |
-|-------|--------|
-| message id | 32 hex digits (a GUID without dashes); writers use lowercase |
-| observed-at | `yyyyMMddTHHmmssZ`, UTC, whole seconds |
-| originator | 1-8 of `A-Z 0-9` |
 # PXF — Partner Exchange Format (fictional)
 
 PXF is invented for this demo. It is not, and does not imitate, any real NATO or national standard.

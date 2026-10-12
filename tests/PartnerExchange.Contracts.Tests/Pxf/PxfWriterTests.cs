@@ -5,16 +5,16 @@ namespace PartnerExchange.Contracts.Tests.Pxf;
 
 public class PxfWriterTests
 {
-    // [Theory]
-    // [InlineData("v1-report.pxf")]
-    // [InlineData("v2-report.pxf")]
-    // public void Writes_golden_files_byte_for_byte(string file)
-    // {
-    //     var golden = Samples.Golden(file);
-    // Assert.True(PxfParser.TryParse(golden, out var parsed, out _));
-    // Assert.NotNull(parsed);
-    // Assert.Equal(golden, PxfWriter.Write(parsed));
-    // }
+    [Theory]
+    [InlineData("v1-report.pxf")]
+    [InlineData("v2-report.pxf")]
+    public void Writes_golden_files_byte_for_byte(string file)
+    {
+        var golden = Samples.Golden(file);
+        Assert.True(PxfParser.TryParse(golden, out var parsed, out _));
+        Assert.NotNull(parsed);
+        Assert.Equal(golden, PxfWriter.Write(parsed));
+    }
 
     [Fact]
     public void Output_does_not_depend_on_the_current_culture()
