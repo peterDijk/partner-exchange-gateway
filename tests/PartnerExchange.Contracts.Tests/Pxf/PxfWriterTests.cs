@@ -8,10 +8,12 @@ public class PxfWriterTests
     [Theory]
     [InlineData("v1-report.pxf")]
     [InlineData("v2-report.pxf")]
+    [InlineData("v3-report.pxf")]
     public void Writes_golden_files_byte_for_byte(string file)
     {
         var golden = Samples.Golden(file);
-        Assert.True(PxfParser.TryParse(golden, out var parsed, out _));
+        var ok = PxfParser.TryParse(golden, out var parsed, out var errors);
+        Assert.True(ok, string.Join("; ", errors));
         Assert.NotNull(parsed);
         Assert.Equal(golden, PxfWriter.Write(parsed));
     }

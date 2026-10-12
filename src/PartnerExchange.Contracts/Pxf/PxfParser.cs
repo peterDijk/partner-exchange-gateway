@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -50,7 +49,7 @@ public static partial class PxfParser
         message = new PxfMessage(
             version, header.MessageId, header.ObservedAt, header.Originator,
             unit.UnitId, unit.Callsign, position.Latitude, position.Longitude,
-            position.AltitudeMeters, status.Status, status.Readiness
+            position.AltitudeMeters, position.SpeedKnots, status.Status, status.Readiness
         );
         
         return true;
@@ -58,7 +57,7 @@ public static partial class PxfParser
 
     private sealed record HeaderSegment(Guid MessageId, DateTimeOffset ObservedAt, string Originator);
     private sealed record UnitSegment(string UnitId, string Callsign);
-    private sealed record PositionSegment(decimal Latitude, decimal Longitude, int? AltitudeMeters);
+    private sealed record PositionSegment(decimal Latitude, decimal Longitude, int? AltitudeMeters, int? SpeedKnots);
     private sealed record StatusSegment(PxfStatus Status, char? Readiness);
 
     private static PxfVersion? ParseVersion(string line, List<PxfError> problems)
@@ -70,6 +69,7 @@ public static partial class PxfParser
         {
             "1" => PxfVersion.V1,
             "2" => PxfVersion.V2,
+            "3" => PxfVersion.V3,
             _ => null
         };
         Check(version is not null, problems, 1, "VERSION", $"Unsupported PXF version '{fields[0]}'.");
@@ -134,11 +134,20 @@ public static partial class PxfParser
     private static PositionSegment? ParsePosition(string line, PxfVersion version, List<PxfError> problems)
     {
         const int lineNo = 4;
-        var fields = Fields(line, lineNo, "P", version == PxfVersion.V1 ? 2 : 3, problems);
+        int expectedFieldsCount = version switch
+        {
+            PxfVersion.V1 => 2,
+            PxfVersion.V2 => 3,
+            PxfVersion.V3 => 4,
+            _ => throw new ArgumentOutOfRangeException(nameof(version), version, "Unknown PXF version"),
+        };
+
+        var fields = Fields(line, lineNo, "P", expectedFieldsCount, problems);
         if (fields is null) return null;
 
         decimal lat = 0, lon = 0;
         int? altitude = null;
+        int? speed = null;
 
         var ok = Check(
             LatitudePattern().IsMatch(fields[0]) &&
@@ -169,7 +178,28 @@ public static partial class PxfParser
             if (ok) altitude = int.Parse(fields[2], CultureInfo.InvariantCulture);
         }
 
-        return ok? new PositionSegment(lat, lon, altitude) : null;
+        if (version == PxfVersion.V3)
+        {
+            ok &= Check(
+                AltitudePattern().IsMatch(fields[2]),
+                problems,
+                lineNo,
+                "P.ALT",
+                "Altitude must be 4 digits (metres)"
+            );
+            if (ok) altitude = int.Parse(fields[2], CultureInfo.InvariantCulture);
+
+            ok &= Check(
+                SpeedPattern().IsMatch(fields[3]),
+                problems,
+                lineNo,
+                "P.SPEED",
+                "Speed must be 3 digits (knots)"
+            );
+            if (ok) speed = int.Parse(fields[3], CultureInfo.InvariantCulture);
+        }
+
+        return ok? new PositionSegment(lat, lon, altitude, speed) : null;
     }
 
     private static StatusSegment? ParseStatus(string line, PxfVersion version, List<PxfError> problems)
@@ -188,8 +218,8 @@ public static partial class PxfParser
         
         char? readiness = null;
         var validReadiness = true;
-        
-        if (version == PxfVersion.V2)
+
+        if (version >= PxfVersion.V2)
         {
             var field = fields[1];
             var ch = field is [>= 'A' and <= 'D'];
@@ -244,4 +274,6 @@ public static partial class PxfParser
     [GeneratedRegex(@"^[+-][0-9]{2}\.[0-9]{5}$")] private static partial Regex LatitudePattern();
     [GeneratedRegex(@"^[+-][0-9]{3}\.[0-9]{5}$")] private static partial Regex LongitudePattern();
     [GeneratedRegex("^[0-9]{4}$")] private static partial Regex AltitudePattern();
+    [GeneratedRegex("^[0-9]{3}$")] private static partial Regex SpeedPattern();
+
 }

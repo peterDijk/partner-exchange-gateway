@@ -4,6 +4,7 @@ public enum PxfVersion
 {
     V1 = 1,
     V2 = 2,
+    V3 = 3,
 }
 
 public enum PxfStatus
@@ -23,6 +24,7 @@ public sealed record PxfMessage(
     decimal Latitude,
     decimal Longitude,
     int? AltitudeMetres,
+    int? SpeedKnots,
     PxfStatus Status,
     char? Readiness);
 

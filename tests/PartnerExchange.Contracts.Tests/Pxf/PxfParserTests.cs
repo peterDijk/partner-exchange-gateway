@@ -49,7 +49,7 @@ public class PxfParserTests
     }
 
     [Theory]
-    [InlineData("PXF 3")]
+    [InlineData("PXF 4")]
     [InlineData("PXF  2")]
     [InlineData("pxf 2")]
     public void Rejects_unknown_or_malformed_version_lines(string firstLine)

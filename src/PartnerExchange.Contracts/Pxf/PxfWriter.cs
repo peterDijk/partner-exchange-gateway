@@ -31,6 +31,7 @@ public static class PxfWriter
         {
             PxfVersion.V1 => $"P {lat} {lon}",
             PxfVersion.V2 => string.Create(Inv, $"P {lat} {lon} {Require(m.AltitudeMetres, "altitude"):0000}"),
+            PxfVersion.V3 => string.Create(Inv, $"P {lat} {lon} {Require(m.AltitudeMetres, "altitude"):0000} {Require(m.SpeedKnots, "speed"):000}"),
             _ => throw new NotSupportedException($"Unsupported PXF version {m.Version}")
         };
     }
@@ -38,10 +39,10 @@ public static class PxfWriter
     private static string StatusLine(PxfMessage m) => m.Version switch
     {
         PxfVersion.V1 => $"S {PxfCodes.Status.ToV1(m.Status)}",
-        PxfVersion.V2 => $"S {PxfCodes.Status.ToV2(m.Status)} {Require(m.Readiness, "readiness")}",
+        >= PxfVersion.V2 => $"S {PxfCodes.Status.ToV2(m.Status)} {Require(m.Readiness, "readiness")}",
         _ => throw new ArgumentOutOfRangeException(nameof(m), m.Version, "Unknown PXF version")
     };
 
     private static T Require<T>(T? value, string field) where T : struct =>
-        value ?? throw new ArgumentException($"PXF v2 requires {field}", nameof(value));
+        value ?? throw new ArgumentException($"PXF requires {field}", nameof(value));
 }
