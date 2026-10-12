@@ -11,6 +11,7 @@ I'm building this to learn C#/.NET coming from Scala, and because the problems i
 Work in progress:
 
 Roadmap:
+
 - [ ] PXF format and translators
 - [ ] event-sourced domain
 - [ ] event store
@@ -27,7 +28,8 @@ Roadmap:
 ## Coming from Scala
 
 - using lock to prevent threads writing to concurrently to shared component state
+- The TryX pattern that is used, in stead of the Either monad, and declaring the out var in the method signature, instead of returning a tuple
 
 ## How I built this
 
-I wrote the outline and an implementation plan with AI assistance, including code. I'm typing the code over milestone by milestone, asking AI to explain what I don't know, and running the tests at each step. Where I deviate from the plan, the commit message says so.
+I wrote the project outline. An implementation plan is created with AI assistance, including code snippets. I'm implementing milestone by milestone, finding clearification on suggested C#/.NET patterns by consulting documentation and LLM, and running the tests at each step. Where I deviate from the plan, the commit message says so.
