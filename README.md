@@ -11,7 +11,7 @@ I'm building this to learn C#/.NET coming from Scala, and because the problems i
 Work in progress:
 
 Roadmap:
-- [ ] PXF format and translators
+- [x] PXF format and translators
 - [ ] event-sourced domain
 - [ ] event store
 - [ ] gateway API
