@@ -1,6 +1,7 @@
 # Partner Exchange Gateway
 
 A small message gateway between a fictional national system and fictional coalition partners. It takes unit position and status reports, translates them to and from an invented format (PXF), stores them as events, and delivers them to partners that may be unreliable: retries, circuit breaking, dead letters, replay, recovery after a restart.
+A small message gateway between a fictional national system and fictional coalition partners. It takes unit position and status reports, translates them to and from an invented format (PXF), stores them as events, and delivers them to partners that may be unreliable: retries, circuit breaking, dead letters, replay, recovery after a restart.
 
 Everything here is made up. Nothing imitates or claims compliance with a real NATO standard, and there is no real defence data.
 
@@ -14,8 +15,11 @@ Roadmap:
 - [x] PXF format and translators
 - [ ] event-sourced domain
 - [ ] event store
+- [ ] event store
 - [ ] gateway API
 - [ ] outbound delivery + fault-injecting partner simulator
+- [ ] retries, circuit breaker, dead letters
+- [ ] signed inbound messages + idempotency
 - [ ] retries, circuit breaker, dead letters
 - [ ] signed inbound messages + idempotency
 - [ ] restart recovery
