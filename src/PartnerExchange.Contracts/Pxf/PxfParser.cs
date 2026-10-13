@@ -1,0 +1,279 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
+
+namespace PartnerExchange.Contracts.Pxf;
+
+public static partial class PxfParser
+{
+    public const int MaxMessageBytes = 1024;
+    private const string TimestampFormat = "yyyyMMdd'T'HHmmss'Z'";
+
+    public static bool TryParse(
+        string text,
+        [NotNullWhen(true)] out PxfMessage? message,
+        out IReadOnlyList<PxfError> errors)
+    {
+        message = null;
+        var problems = new List<PxfError>();
+        errors = problems;
+
+        if (text.Length > MaxMessageBytes || !Ascii.IsValid(text))
+        {
+            problems.Add(new PxfError(0, "SIZE", $"Message must be ASCII and at most {MaxMessageBytes} bytes."));
+            return false;
+        }
+
+        var lines = text.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n');
+        if (lines.Length != 6)
+        {
+            problems.Add(new PxfError(0, "STRUCTURE", $"Expected 6 lines, got {lines.Length}"));
+            return false;
+        }
+
+        if (ParseVersion(lines[0], problems) is not { } version)
+        {
+            return false;
+        }
+
+        var header = ParseHeader(lines[1], problems);
+        var unit = ParseUnit(lines[2], problems);
+        var position = ParsePosition(lines[3], version, problems);
+        var status = ParseStatus(lines[4], version, problems);
+        ParseTrailer(lines[5], lines[..5], problems);
+
+        if (header is null || unit is null || position is null ||
+            status is null || problems.Count > 0) return false;
+        
+        message = new PxfMessage(
+            version, header.MessageId, header.ObservedAt, header.Originator,
+            unit.UnitId, unit.Callsign, position.Latitude, position.Longitude,
+            position.AltitudeMeters, position.SpeedKnots, status.Status, status.Readiness
+        );
+        
+        return true;
+    }
+
+    private sealed record HeaderSegment(Guid MessageId, DateTimeOffset ObservedAt, string Originator);
+    private sealed record UnitSegment(string UnitId, string Callsign);
+    private sealed record PositionSegment(decimal Latitude, decimal Longitude, int? AltitudeMeters, int? SpeedKnots);
+    private sealed record StatusSegment(PxfStatus Status, char? Readiness);
+
+    private static PxfVersion? ParseVersion(string line, List<PxfError> problems)
+    {
+        var fields = Fields(line, 1, "PXF", 1, problems);
+        if (fields is null) return null;
+
+        PxfVersion? version = fields[0] switch
+        {
+            "1" => PxfVersion.V1,
+            "2" => PxfVersion.V2,
+            "3" => PxfVersion.V3,
+            _ => null
+        };
+        Check(version is not null, problems, 1, "VERSION", $"Unsupported PXF version '{fields[0]}'.");
+        return version;
+    }
+
+    private static HeaderSegment? ParseHeader(string line, List<PxfError> problems)
+    {
+        const int lineNo = 2;
+        var fields = Fields(line, lineNo, "H", 3, problems);
+        if (fields is null) return null;
+
+        var ok = Check(
+            Guid.TryParseExact(fields[0], "N", out var messageId),
+            problems,
+            lineNo,
+            "H.ID",
+            "Message id must be 32 hex digits.") &
+            Check(
+                DateTimeOffset.TryParseExact(
+                    fields[1],
+                    TimestampFormat,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                    out var observedAt),
+                problems,
+                lineNo,
+                "H.TIME",
+                "Observed-at must be yyyyMMddTHHmmssZ.") &
+            Check(
+                OriginatorPattern().IsMatch(fields[2]),
+                problems,
+                lineNo,
+                "H.ORIGIN",
+                "Originator must be 1-8 chars of A-Z or 0-9.");
+        
+        return ok ? new HeaderSegment(messageId, observedAt, fields[2]) : null;
+    }
+
+    private static UnitSegment? ParseUnit(string line, List<PxfError> problems)
+    {
+        const int lineNo = 3;
+        var fields = Fields(line, lineNo, "U", 2, problems);
+        if (fields is null) return null;
+
+        var ok = Check(
+            UnitIdPattern().IsMatch(fields[0]),
+            problems,
+            lineNo,
+            "U.ID",
+            "Unit-id must be 1-16 chars of A-Z or 0-9") &
+            Check(
+                CallsignPattern().IsMatch(fields[1]),
+                problems,
+                lineNo,
+                "U.CALLSIGN",
+                "Callsign must be 1-8 chars of A- or 0-9");
+        
+        return ok ? new UnitSegment(fields[0], fields[1]) : null;
+    }
+
+    private static PositionSegment? ParsePosition(string line, PxfVersion version, List<PxfError> problems)
+    {
+        const int lineNo = 4;
+        int expectedFieldsCount = version switch
+        {
+            PxfVersion.V1 => 2,
+            PxfVersion.V2 => 3,
+            PxfVersion.V3 => 4,
+            _ => throw new ArgumentOutOfRangeException(nameof(version), version, "Unknown PXF version"),
+        };
+
+        var fields = Fields(line, lineNo, "P", expectedFieldsCount, problems);
+        if (fields is null) return null;
+
+        decimal lat = 0, lon = 0;
+        int? altitude = null;
+        int? speed = null;
+
+        var ok = Check(
+            LatitudePattern().IsMatch(fields[0]) &&
+                TryDecimal(fields[0], out lat) &&
+                lat is >= -90m and <= 90m,
+            problems,
+            lineNo,
+            "P.LAT",
+            "Latitude must be like +12.34560 and within -90..90") &
+            Check(
+                LongitudePattern().IsMatch(fields[1]) &&
+                    TryDecimal(fields[1], out lon) &&
+                    lon is >= -180m and <= 180m,
+                problems,
+                lineNo,
+                "P.LON",
+                "Longitude must be like -045.67890 and within -180..180");
+        
+        if (version == PxfVersion.V2)
+        {
+            ok &= Check(
+                AltitudePattern().IsMatch(fields[2]),
+                problems,
+                lineNo,
+                "P.ALT",
+                "Altitude must be 4 digits (metres)"
+            );
+            if (ok) altitude = int.Parse(fields[2], CultureInfo.InvariantCulture);
+        }
+
+        if (version == PxfVersion.V3)
+        {
+            ok &= Check(
+                AltitudePattern().IsMatch(fields[2]),
+                problems,
+                lineNo,
+                "P.ALT",
+                "Altitude must be 4 digits (metres)"
+            );
+            if (ok) altitude = int.Parse(fields[2], CultureInfo.InvariantCulture);
+
+            ok &= Check(
+                SpeedPattern().IsMatch(fields[3]),
+                problems,
+                lineNo,
+                "P.SPEED",
+                "Speed must be 3 digits (knots)"
+            );
+            if (ok) speed = int.Parse(fields[3], CultureInfo.InvariantCulture);
+        }
+
+        return ok? new PositionSegment(lat, lon, altitude, speed) : null;
+    }
+
+    private static StatusSegment? ParseStatus(string line, PxfVersion version, List<PxfError> problems)
+    {
+        const int lineNo = 5;
+        var fields = Fields(line, lineNo, "S", version == PxfVersion.V1 ? 1 : 2, problems);
+        if (fields is null) return null;
+
+        var status = version == PxfVersion.V1 ?
+            PxfCodes.Status.FromV1(fields[0]) :
+            PxfCodes.Status.FromV2(fields[0]);
+        var validStatus = Check(
+            status is not null,
+            problems, lineNo, "S.STATUS",
+            $"Unknown status '{fields[0]}' for PXF v{(int)version}");
+        
+        char? readiness = null;
+        var validReadiness = true;
+
+        if (version >= PxfVersion.V2)
+        {
+            var field = fields[1];
+            var ch = field is [>= 'A' and <= 'D'];
+            validReadiness = Check(
+                ch,
+                problems,
+                lineNo,
+                "S.READY",
+                "Readiness must be one letter A-D");
+            if (validReadiness) readiness = field[0];
+        }
+
+        return status is not null && validStatus && validReadiness ? 
+            new StatusSegment(status.Value, readiness) :
+            null;
+    }
+
+    private static void ParseTrailer(string line, string[] bodyLines, List<PxfError> problems)
+    {
+        const int lineNo = 6;
+        var fields = Fields(line, lineNo, "Z", 1, problems);
+        if (fields is null) return;
+
+        var expected = PxfChecksum.Compute(
+            string.Concat(bodyLines.Select(l => l + "\n")));
+        Check(fields[0] == expected, problems, lineNo, "Z.CHECKSUM", $"Checksum mismatch: expected {expected}, got {fields[0]}.");
+    }
+
+    private static string[]? Fields(string line, int lineNo, string tag, int count, List<PxfError> problems)
+    {
+        var parts = line.Split(' ');
+        var tagCheck = Check(parts[0] == tag, problems, lineNo, "TAG", $"Expected segment '{tag}', got '{parts[0]}'.");
+        var fieldsCheck = Check(parts.Length - 1 == count, problems, lineNo, "FIELDS", $"Segment '{tag}' expects {count} field(s), got {parts.Length - 1}.");
+        return !tagCheck || !fieldsCheck ? null : parts[1..];
+    }
+
+    private static bool Check(bool condition, List<PxfError> problems, int line, string code, string message)
+    {
+        if (!condition) problems.Add(new PxfError(line, code, message));
+        return condition;
+    }
+
+    private static bool TryDecimal(string s, out decimal value) =>
+        decimal.TryParse(s,
+            NumberStyles.AllowLeadingSign |
+            NumberStyles.AllowDecimalPoint,
+            CultureInfo.InvariantCulture, out value);
+
+    [GeneratedRegex("^[A-Z0-9]{1,8}$")] private static partial Regex OriginatorPattern();
+    [GeneratedRegex("^[A-Z0-9-]{1,16}$")] private static partial Regex UnitIdPattern();
+    [GeneratedRegex("^[A-Z0-9]{1,8}$")] private static partial Regex CallsignPattern();
+    [GeneratedRegex(@"^[+-][0-9]{2}\.[0-9]{5}$")] private static partial Regex LatitudePattern();
+    [GeneratedRegex(@"^[+-][0-9]{3}\.[0-9]{5}$")] private static partial Regex LongitudePattern();
+    [GeneratedRegex("^[0-9]{4}$")] private static partial Regex AltitudePattern();
+    [GeneratedRegex("^[0-9]{3}$")] private static partial Regex SpeedPattern();
+
+}

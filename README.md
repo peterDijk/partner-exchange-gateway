@@ -12,7 +12,7 @@ Work in progress:
 
 Roadmap:
 
-- [ ] PXF format and translators
+- [x] PXF format and translators
 - [ ] event-sourced domain
 - [ ] event store
 - [ ] gateway API
@@ -32,4 +32,4 @@ Roadmap:
 
 ## How I built this
 
-I wrote the project outline. An implementation plan is created with AI assistance, including code snippets. I'm implementing milestone by milestone, finding clearification on suggested C#/.NET patterns by consulting documentation and LLM, and running the tests at each step. Where I deviate from the plan, the commit message says so.
+I wrote the project outline. An implementation plan is created with AI assistance, including code snippets. I'm implementing milestone by milestone, writing every line and finding clearification on suggested C#/.NET patterns by consulting documentation and LLM, and running the tests at each step. Where I deviate from the plan, the commit message says so.

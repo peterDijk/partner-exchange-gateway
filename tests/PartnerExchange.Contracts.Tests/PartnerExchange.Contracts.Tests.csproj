@@ -15,4 +15,8 @@
     <ProjectReference Include="..\..\src\PartnerExchange.Contracts\PartnerExchange.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Golden\*.pxf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
