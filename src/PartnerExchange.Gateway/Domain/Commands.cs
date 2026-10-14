@@ -17,5 +17,5 @@ public sealed record AcceptReport(
 
 public sealed record RecordSuccess : DeliveryCommand;
 public sealed record RecordFailure(string Reason, bool Permanent,
-    RetryPolicy Policy, double Jitter) : DeliveryCommand;
+    double Jitter) : DeliveryCommand;
 public sealed record RequestReplay : DeliveryCommand;

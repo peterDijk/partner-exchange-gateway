@@ -50,6 +50,8 @@ public static class DeliveryAggregate
                     cmd.Payload, cmd.Report, cmd.Warnings, now)
             ]),
 
+            (_, AcceptReport cmd) => new Decision.Reject($"Delivery {cmd.MessageId} already exists."),
+            
             (null, _) => new Decision.Reject("delivery doesn't exist"),
 
             ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled } s, RecordSuccess) =>
