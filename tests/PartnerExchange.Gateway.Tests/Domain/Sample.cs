@@ -9,7 +9,7 @@ internal static class Sample
     public static readonly Guid MessageId = Guid.Parse("0192f1a0-7c3e-7a1b-9d4e-2f60a8b3c5d7");
 
     public static UnitReport Report() => new(
-        "BLUE-ALPHA-01", "FALCON11", 12.3456m, -45.6789m, 150, 032,
+        "BLUE-ALPHA-01", "FALCON11", 12.3456m, -45.6789m, 150, 32,
         OperationalStatus.FullyOperational, ReadinessLevel.Immediate,
         new DateTimeOffset(2026, 10, 6, 10, 15, 0, TimeSpan.Zero));
 

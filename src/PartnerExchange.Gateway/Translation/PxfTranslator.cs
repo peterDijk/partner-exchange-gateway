@@ -11,7 +11,7 @@ public static class PxfTranslator
     private const int PxfDecimals = 5;
 
     public static TranslationResult<PxfMessage> ToPxf(
-        UnitReport report, Guid messageId, string originator, PxfVersion version)
+        UnitReport report, Guid messageId, string originator, PxfVersion version, DateTimeOffset now)
     {
         var errors = new List<string>();
         var warnings = new List<string>();
@@ -49,6 +49,11 @@ public static class PxfTranslator
         var lon = Math.Round(report.Longitude, PxfDecimals, MidpointRounding.AwayFromZero);
         if (lat != report.Latitude || lon != report.Longitude)
             warnings.Add($"Coordinates rounded to {PxfDecimals} decimals");
+        
+        if (report.ObservedAt > now + TimeSpan.FromMinutes(5))
+        {
+            errors.Add("Observed at can't be in the future");
+        }
 
         if (errors.Count > 0)
             // With errors we cant have a valid PxfMessage, so return null

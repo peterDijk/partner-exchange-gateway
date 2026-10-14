@@ -122,4 +122,32 @@ public class DeliveryAggregateTests
                 )
         );
     }
+
+    [Fact]
+    public void Replay_gives_a_fresh_budget_then_dead_letters_again()
+    {
+        var state = Given(
+            Sample.Accepted(),
+            new DeliveryDeadLettered(Sample.MessageId, 3, "503", T0));
+        var request = SingleEvent<DeliveryReplayRequested>(
+            DeliveryAggregate.Decide(state, new RequestReplay(), T0, Policy));
+        var requested = DeliveryAggregate.Apply(state, request);
+
+        var fail1 = SingleEvent<DeliveryAttemptFailed>(
+            DeliveryAggregate.Decide(requested, new RecordFailure("503", false, 0.1), T0, Policy));
+        var failed1 = DeliveryAggregate.Apply(requested, fail1);
+
+        var fail2 = SingleEvent<DeliveryAttemptFailed>(
+            DeliveryAggregate.Decide(failed1, new RecordFailure("503", false, 0.1), T0, Policy));
+        var failed2 = DeliveryAggregate.Apply(failed1, fail2);
+
+        var fail3 = SingleEvent<DeliveryDeadLettered>(
+            DeliveryAggregate.Decide(failed2, new RecordFailure("503", false, 0.1), T0, Policy));
+        var failed3 = DeliveryAggregate.Apply(failed2, fail3);
+        
+        Assert.Equal(DeliveryStatus.DeadLettered, failed3.Status);
+        Assert.Equal(3, failed3.Attempts);
+    }
+
+    
 }
