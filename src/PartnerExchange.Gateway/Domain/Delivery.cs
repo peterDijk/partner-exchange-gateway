@@ -24,11 +24,3 @@ public sealed record Delivery(
     DateTimeOffset? DeliveredAt
 );
 
-public sealed record AcceptReport(
-    Guid MessageId,
-    string PartnerId,
-    PxfVersion Version,
-    string Payload,
-    UnitReport Report,
-    IReadOnlyList<string> Warnings
-);

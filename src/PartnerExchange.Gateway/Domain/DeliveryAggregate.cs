@@ -42,5 +42,35 @@ public static class DeliveryAggregate
     public static Delivery? Fold(IEnumerable<DeliveryEvent> events) =>
         events.Aggregate((Delivery?)null, (state, e) => Apply(state,e));
 
+    public static Decision? Decide(Delivery? state, DeliveryCommand command, DateTimeOffset now, RetryPolicy policy) =>
+        (state, command) switch
+        {
+            (null, AcceptReport cmd) => new Decision.Emit([
+                new ReportAccepted(cmd.MessageId, cmd.PartnerId, cmd.Version,
+                    cmd.Payload, cmd.Report, cmd.Warnings, now)
+            ]),
 
+            (null, _) => new Decision.Reject("delivery doesnt exist"),
+
+            ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled} s, RecordSuccess) => 
+                new Decision.Emit([new ReportDelivered(s.MessageId, s.Attempts + 1, now)]),
+
+            ({ } s, RecordSuccess) => new Decision.Reject($"Status is {s.Status}, can not record success"),
+
+            ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled } s, RecordFailure cmd)
+                when cmd.permanent || s.Attempts + 1 >= policy.MaxAttempts =>
+                new Decision.Emit([new DeliveryDeadLettered(s.MessageId, s.Attempts + 1, cmd.reason, now)]),
+
+            ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled } s, RecordFailure cmd) =>
+                new Decision.Emit([new DeliveryAttemptFailed(
+                        s.MessageId, s.Attempts + 1, cmd.reason, now,
+                        now + policy.DelayFor(s.Attempts + 1, cmd.jitter))]),
+
+            ({ } s, RecordFailure) => new Decision.Reject($"Status is {s.Status}, can not record failure"),
+            
+            ({ Status: DeliveryStatus.DeadLettered } s, RequestReplay) => 
+                new Decision.Emit([new DeliveryReplayRequested(s.MessageId, now)]),
+            ({ } s, RequestReplay) => new Decision.Reject($"Can only be requested for deadlettered deliveries, current status is {s.Status}"),
+            _ => throw new InvalidOperationException("unknown command")
+        };
 }
