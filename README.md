@@ -13,7 +13,7 @@ Work in progress:
 Roadmap:
 
 - [x] PXF format and translators
-- [ ] event-sourced domain
+- [x] event-sourced domain
 - [ ] event store
 - [ ] gateway API
 - [ ] outbound delivery + fault-injecting partner simulator
