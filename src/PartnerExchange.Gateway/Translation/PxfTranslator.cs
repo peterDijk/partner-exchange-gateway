@@ -61,6 +61,18 @@ public static class PxfTranslator
         return new(message, errors, warnings);
     }
 
+    public static UnitReport FromPxf(PxfMessage m) => new(
+        m.UnitId,
+        m.Callsign,
+        m.Latitude,
+        m.Longitude,
+        m.AltitudeMetres,
+        m.SpeedKnots,
+        FromPxfStatus(m.Status),
+        m.Readiness is { } r ? FromPxfReadiness(r) : null,
+        m.ObservedAt
+    );
+
     private static PxfStatus ToPxfStatus(OperationalStatus s) => s switch
     {
         OperationalStatus.FullyOperational => PxfStatus.Operational,

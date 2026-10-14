@@ -23,5 +23,5 @@ public sealed record UnitReport(
     int? AltitudeMeters,
     int? SpeedKnots,
     OperationalStatus Status,
-    ReadinessLevel Readiness,
+    ReadinessLevel? Readiness,
     DateTimeOffset ObservedAt);

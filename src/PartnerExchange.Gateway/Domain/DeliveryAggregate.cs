@@ -36,7 +36,7 @@ public static class DeliveryAggregate
             NextAttemptAt = null,
         },
         _ => throw new InvalidOperationException(
-            $"Cannon apply {e.GetType().Name} to {state?.Status.ToString() ?? "a new"} delivery"),
+            $"Cannot apply {e.GetType().Name} to {state?.Status.ToString() ?? "a new"} delivery"),
     };
 
     public static Delivery? Fold(IEnumerable<DeliveryEvent> events) =>
@@ -50,7 +50,7 @@ public static class DeliveryAggregate
                     cmd.Payload, cmd.Report, cmd.Warnings, now)
             ]),
 
-            (null, _) => new Decision.Reject("delivery doesnt exist"),
+            (null, _) => new Decision.Reject("delivery doesn't exist"),
 
             ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled } s, RecordSuccess) =>
                 new Decision.Emit([new ReportDelivered(s.MessageId, s.Attempts + 1, now)]),
@@ -58,13 +58,13 @@ public static class DeliveryAggregate
             ({ } s, RecordSuccess) => new Decision.Reject($"Status is {s.Status}, can not record success"),
 
             ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled } s, RecordFailure cmd)
-                when cmd.permanent || s.Attempts + 1 >= policy.MaxAttempts =>
-                new Decision.Emit([new DeliveryDeadLettered(s.MessageId, s.Attempts + 1, cmd.reason, now)]),
+                when cmd.Permanent || s.Attempts + 1 >= policy.MaxAttempts =>
+                new Decision.Emit([new DeliveryDeadLettered(s.MessageId, s.Attempts + 1, cmd.Reason, now)]),
 
             ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled } s, RecordFailure cmd) =>
                 new Decision.Emit([new DeliveryAttemptFailed(
-                        s.MessageId, s.Attempts + 1, cmd.reason, now,
-                        now + policy.DelayFor(s.Attempts + 1, cmd.jitter))]),
+                        s.MessageId, s.Attempts + 1, cmd.Reason, now,
+                        now + policy.DelayFor(s.Attempts + 1, cmd.Jitter))]),
 
             ({ } s, RecordFailure) => new Decision.Reject($"Status is {s.Status}, can not record failure"),
 

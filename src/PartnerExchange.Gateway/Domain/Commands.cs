@@ -15,7 +15,7 @@ public sealed record AcceptReport(
     IReadOnlyList<string> Warnings
 ) : DeliveryCommand;
 
-public sealed record RecordSuccess(DateTimeOffset now) : DeliveryCommand;
-public sealed record RecordFailure(string reason, bool permanent, DateTimeOffset now,
-    RetryPolicy policy, double jitter) : DeliveryCommand;
-public sealed record RequestReplay(DateTimeOffset now) : DeliveryCommand;
+public sealed record RecordSuccess : DeliveryCommand;
+public sealed record RecordFailure(string Reason, bool Permanent,
+    RetryPolicy Policy, double Jitter) : DeliveryCommand;
+public sealed record RequestReplay : DeliveryCommand;
