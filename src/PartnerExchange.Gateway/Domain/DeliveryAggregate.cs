@@ -8,39 +8,39 @@ public static class DeliveryAggregate
             a.MessageId, a.PartnerId, a.Version,
             a.Payload, a.Warnings, DeliveryStatus.Pending,
             Attempts: 0, NextAttemptAt: null, LastError: null, a.AcceptedAt, DeliveredAt: null),
-            (Delivery s, DeliveryAttemptFailed f) => s with
-            {
-                Status = DeliveryStatus.RetryScheduled,
-                Attempts = f.Attempt,
-                NextAttemptAt = f.NextAttemptAt,
-                LastError = f.Reason
-            },
-            (Delivery s, ReportDelivered d) => s with
-            {
-                Status = DeliveryStatus.Delivered,
-                Attempts = d.Attempt,
-                NextAttemptAt = null,
-                DeliveredAt = d.DeliveredAt,
-            },
-            (Delivery s, DeliveryDeadLettered x) => s with
-            {
-                Status = DeliveryStatus.DeadLettered,
-                Attempts = x.Attempts,
-                NextAttemptAt = null,
-                LastError = x.Reason,
-            },
-            (Delivery s, DeliveryReplayRequested) => s with
-            {
-                Status = DeliveryStatus.Pending,
-                Attempts = 0,
-                NextAttemptAt = null,
-            },
+        (Delivery s, DeliveryAttemptFailed f) => s with
+        {
+            Status = DeliveryStatus.RetryScheduled,
+            Attempts = f.Attempt,
+            NextAttemptAt = f.NextAttemptAt,
+            LastError = f.Reason
+        },
+        (Delivery s, ReportDelivered d) => s with
+        {
+            Status = DeliveryStatus.Delivered,
+            Attempts = d.Attempt,
+            NextAttemptAt = null,
+            DeliveredAt = d.DeliveredAt,
+        },
+        (Delivery s, DeliveryDeadLettered x) => s with
+        {
+            Status = DeliveryStatus.DeadLettered,
+            Attempts = x.Attempts,
+            NextAttemptAt = null,
+            LastError = x.Reason,
+        },
+        (Delivery s, DeliveryReplayRequested) => s with
+        {
+            Status = DeliveryStatus.Pending,
+            Attempts = 0,
+            NextAttemptAt = null,
+        },
         _ => throw new InvalidOperationException(
             $"Cannon apply {e.GetType().Name} to {state?.Status.ToString() ?? "a new"} delivery"),
     };
 
     public static Delivery? Fold(IEnumerable<DeliveryEvent> events) =>
-        events.Aggregate((Delivery?)null, (state, e) => Apply(state,e));
+        events.Aggregate((Delivery?)null, (state, e) => Apply(state, e));
 
     public static Decision? Decide(Delivery? state, DeliveryCommand command, DateTimeOffset now, RetryPolicy policy) =>
         (state, command) switch
@@ -52,7 +52,7 @@ public static class DeliveryAggregate
 
             (null, _) => new Decision.Reject("delivery doesnt exist"),
 
-            ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled} s, RecordSuccess) => 
+            ({ Status: DeliveryStatus.Pending or DeliveryStatus.RetryScheduled } s, RecordSuccess) =>
                 new Decision.Emit([new ReportDelivered(s.MessageId, s.Attempts + 1, now)]),
 
             ({ } s, RecordSuccess) => new Decision.Reject($"Status is {s.Status}, can not record success"),
@@ -67,10 +67,12 @@ public static class DeliveryAggregate
                         now + policy.DelayFor(s.Attempts + 1, cmd.jitter))]),
 
             ({ } s, RecordFailure) => new Decision.Reject($"Status is {s.Status}, can not record failure"),
-            
-            ({ Status: DeliveryStatus.DeadLettered } s, RequestReplay) => 
+
+            ({ Status: DeliveryStatus.DeadLettered } s, RequestReplay) =>
                 new Decision.Emit([new DeliveryReplayRequested(s.MessageId, now)]),
+
             ({ } s, RequestReplay) => new Decision.Reject($"Can only be requested for deadlettered deliveries, current status is {s.Status}"),
+
             _ => throw new InvalidOperationException("unknown command")
         };
 }

@@ -2,7 +2,7 @@ namespace PartnerExchange.Gateway.Domain;
 
 public enum OperationalStatus
 {
-    FullOperational,
+    FullyOperational,
     Degraded,
     OutOfService
 }
@@ -20,7 +20,7 @@ public sealed record UnitReport(
     string Callsign,
     decimal Latitude,
     decimal Longitude,
-    int? Altimeters,
+    int? AltitudeMeters,
     int? SpeedKnots,
     OperationalStatus Status,
     ReadinessLevel Readiness,
