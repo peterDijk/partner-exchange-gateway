@@ -45,7 +45,7 @@ The checksum detects corruption and truncation. It is not a security mechanism; 
     Z 1C8C
 
 ## Example (v3)
-    PXF 2
+    PXF 3
     H 0192f1a07c3e7a1b9d4e2f60a8b3c5d7 20261006T101500Z NLGW
     U BLUE-ALPHA-01 FALCON11
     P +12.34560 -045.67890 0150 032
