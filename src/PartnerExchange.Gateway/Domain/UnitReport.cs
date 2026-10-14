@@ -20,7 +20,7 @@ public sealed record UnitReport(
     string Callsign,
     decimal Latitude,
     decimal Longitude,
-    int? AltitudeMeters,
+    int? AltitudeMetres,
     int? SpeedKnots,
     OperationalStatus Status,
     ReadinessLevel? Readiness,

@@ -21,7 +21,7 @@ public static class PxfTranslator
             errors.Add($"Callsign '{report.Callsign}' exceeds the PXF limit of {PxfCallsignMax} characters.");
         }
 
-        var altitude = report.AltitudeMeters;
+        var altitude = report.AltitudeMetres;
         var speed = report.SpeedKnots;
         char? readiness = report.Readiness is { } r ? ToPxfReadiness(r) : null;
 
