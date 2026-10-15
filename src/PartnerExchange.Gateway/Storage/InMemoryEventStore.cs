@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 using Microsoft.AspNetCore.Mvc.TagHelpers;
 
 using PartnerExchange.Gateway.Domain;
@@ -9,7 +11,8 @@ public sealed class InMemoryEventStore : IEventStore
     private readonly Lock _gate = new();
     // creating the dict with StringComparer.Ordinal makes the key-string compare exact, case-sensitive and culture-invariant
     // it compares UTF-16 code units directly and uses a matching hash
-    private readonly Dictionary<string, List<RecordedEvent>> _streams = new(StringComparer.Ordinal);
+    private ImmutableDictionary<string, ImmutableArray<RecordedEvent>> _streams = 
+        ImmutableDictionary.Create<string, ImmutableArray<RecordedEvent>>(StringComparer.Ordinal);
 
     private readonly IProjection[] _projections;
     private long _lastPosition = -1;
@@ -24,8 +27,8 @@ public sealed class InMemoryEventStore : IEventStore
         lock (_gate)
         {
             IReadOnlyList<RecordedEvent> snapshot = _streams.TryGetValue(streamId, out var stream)
-                ? stream.ToArray()
-                : [];
+                ? stream
+                : ImmutableArray<RecordedEvent>.Empty;
             return Task.FromResult(snapshot);
         }
     }
@@ -36,10 +39,13 @@ public sealed class InMemoryEventStore : IEventStore
     {
         lock (_gate)
         {
-            _streams.TryGetValue(streamId, out var stream);
-            long currentVerion = stream is null
+            var existing = _streams.TryGetValue(streamId, out var s)
+                ? s
+                : ImmutableArray<RecordedEvent>.Empty;
+
+            long currentVerion = existing.Length == 0
                 ? ExpectedVersion.NoStream
-                : stream.Count - 1;
+                : existing.Length - 1;
             
             if (expectedVersion != ExpectedVersion.Any && expectedVersion != currentVerion)
             {
@@ -52,12 +58,8 @@ public sealed class InMemoryEventStore : IEventStore
                     streamId, currentVerion + 1 + i,
                     _lastPosition + 1 + i, events[i]);
             
-            if (stream is null)
-            {
-                stream = [];
-                _streams.Add(streamId, stream);
-            }
-            stream.AddRange(recorded);
+            var updated = existing.AddRange(recorded);
+            _streams = _streams.SetItem(streamId, updated);
             _lastPosition += recorded.Length;
 
             foreach (var r in recorded)
