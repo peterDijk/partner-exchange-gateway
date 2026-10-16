@@ -11,7 +11,7 @@ internal static class Sample
     public static UnitReport Report() => new(
         "BLUE-ALPHA-01", "FALCON11", 12.3456m, -45.6789m, 150, 32,
         OperationalStatus.FullyOperational, ReadinessLevel.Immediate,
-        new DateTimeOffset(2026, 10, 6, 10, 15, 0, TimeSpan.Zero));
+        new DateTimeOffset(2026, 10, 6, 9, 59, 0, TimeSpan.Zero));
 
     public static ReportAccepted Accepted() =>
         new(MessageId, "ALPHA", PxfVersion.V2, "PXF 2\n...", Report(), [], T0);

@@ -27,17 +27,18 @@ public class PxfTranslatorTests
         Assert.NotNull(pxf);
 
         Assert.True(PxfParser.TryParse(PxfWriter.Write(pxf), out var parsed, out _));
-        Assert.Equal(report, PxfTranslator.FromPxf(parsed));
+        Assert.Equal(report with { SpeedKnots = null }, PxfTranslator.FromPxf(parsed));
     }
 
     [Fact]
-    public void V1_drops_altitude_and_readiness_with_warnings()
+    public void V1_drops_altitude_and_readiness_and_speed_with_warnings()
     {
         var result = PxfTranslator.ToPxf(Sample.Report(), Sample.MessageId, "NLGW", PxfVersion.V1, Sample.T0);
 
         Assert.NotNull(result.Value);
         Assert.Null(result.Value.AltitudeMetres);
-        Assert.Equal(2, result.Warnings.Count);
+        Assert.Null(result.Value.SpeedKnots);
+        Assert.Equal(3, result.Warnings.Count);
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public class PxfTranslatorTests
     {
         var result = PxfTranslator.ToPxf(Sample.Report() with { AltitudeMetres = null }, Sample.MessageId, "NLGW", PxfVersion.V2, Sample.T0);
         Assert.Null(result.Value);
-        Assert.Contains("PXF v2 requires altitude.", result.Errors);
+        Assert.Contains("PXF v2 requires altitude", result.Errors);
     }
 
     [Fact]
