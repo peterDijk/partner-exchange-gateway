@@ -39,6 +39,11 @@ public static class PxfTranslator
         {
             if (altitude is null) errors.Add("PXF v2 requires altitude");
             if (readiness is null) errors.Add("PXF v2 requires readiness");
+            if (speed is not null)
+            {
+                warnings.Add("PXF v2 has no speed field; speed is dropped");
+                speed = null;
+            }
         }
         else
         {

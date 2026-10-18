@@ -14,7 +14,7 @@ Roadmap:
 
 - [x] PXF format and translators
 - [x] event-sourced domain
-- [ ] event store
+- [x] event store
 - [ ] gateway API
 - [ ] outbound delivery + fault-injecting partner simulator
 - [ ] retries, circuit breaker, dead letters

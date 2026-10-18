@@ -42,7 +42,7 @@ public static class DeliveryAggregate
     public static Delivery? Fold(IEnumerable<DeliveryEvent> events) =>
         events.Aggregate((Delivery?)null, (state, e) => Apply(state, e));
 
-    public static Decision? Decide(Delivery? state, DeliveryCommand command, DateTimeOffset now, RetryPolicy policy) =>
+    public static Decision Decide(Delivery? state, DeliveryCommand command, DateTimeOffset now, RetryPolicy policy) =>
         (state, command) switch
         {
             (null, AcceptReport cmd) => new Decision.Emit([
