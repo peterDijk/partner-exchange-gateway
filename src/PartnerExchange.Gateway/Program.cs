@@ -5,6 +5,8 @@ using PartnerExchange.Gateway.Application;
 using PartnerExchange.Gateway.Projections;
 using PartnerExchange.Gateway.Storage;
 
+using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 64 * 1024);
@@ -38,6 +40,7 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.MapOpenApi();
+app.MapScalarApiReference();
 app.MapReportEndpoints();
 
 app.Run();

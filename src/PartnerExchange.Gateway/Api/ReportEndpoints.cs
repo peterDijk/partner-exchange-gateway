@@ -16,7 +16,16 @@ public static class ReportEndpoints
     {
         app.MapPost("/reports", SubmitReport)
             .Accepts<SubmitReportRequest>("application/json")
-            .WithSummary("Submit a national report for delivery to a coalition partner.");
+            .WithSummary("Submit a national report for delivery to a coalition partner.")
+            .AddOpenApiOperationTransformer(async (operation, context, ct) =>
+            {
+                var schema = await context.GetOrCreateSchemaAsync(typeof(SubmitReportRequest), cancellationToken: ct);
+                if (operation.RequestBody?.Content is { } content)
+                {
+                    foreach (var mediaType in content.Values)
+                        mediaType.Schema = schema;
+                }
+            });
         app.MapGet("/deliveries/{messageId:guid}", GetDelivery);
         app.MapGet("/deliveries", ListDeliveries);
         app.MapGet("/rejections", ListRejections);
