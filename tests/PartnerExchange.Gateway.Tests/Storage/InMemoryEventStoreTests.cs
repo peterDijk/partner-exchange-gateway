@@ -80,4 +80,23 @@ public class InMemoryEventStoreTests
         await store.AppendAsync(StreamIds.Rejections, ExpectedVersion.Any, [Sample.Accepted()]);
         Assert.Equal(2, (await store.ReadStreamAsync(StreamIds.Rejections)).Count);
     }
+
+    [Fact]
+    public async Task ReadAll_returns_events_after_a_position_in_global_order()
+    {
+        var store = new InMemoryEventStore([]);
+        const string a = "delivery-a";
+        const string b = "delivery-b";
+
+        await store.AppendAsync(a, ExpectedVersion.NoStream, [Sample.Accepted()]); // position 0
+        await store.AppendAsync(b, ExpectedVersion.NoStream, [Sample.Accepted()]); // position 1
+        await store.AppendAsync(a, 0, [Delivered(1)]);                             // position 2
+        await store.AppendAsync(b, 0, [Delivered(2)]);                             // position 3
+
+        var all = await store.ReadAllAsync(-1).ToListAsync();
+        Assert.Equal(new long[] { 0, 1, 2, 3 }, all.Select(e => e.GlobalPosition));
+
+        var afterOne = await store.ReadAllAsync(1).ToListAsync();
+        Assert.Equal(new long[] { 2, 3 }, afterOne.Select(e => e.GlobalPosition));
+    }
 }

@@ -30,6 +30,7 @@ public sealed class DeliveryCommands(IEventStore store)
             try
             {
                 await store.AppendAsync(streamId, history.Count - 1, emit.Events, ct);
+                return decision;
             }
             catch (ConcurrencyConflictException) when (attempt < MaxConflictRetries)
             {

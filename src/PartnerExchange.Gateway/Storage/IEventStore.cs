@@ -10,6 +10,8 @@ public interface IEventStore
 
     Task<long> AppendAsync(string streamId, long expectedVersion,
         IReadOnlyList<DomainEvent> events, CancellationToken ct = default);
+
+    IAsyncEnumerable<RecordedEvent> ReadAllAsync(long fromPosition, CancellationToken ct = default);
 }
 
 public interface IProjection

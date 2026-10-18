@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 using PartnerExchange.Gateway.Domain;
 
@@ -28,6 +29,26 @@ public sealed class InMemoryEventStore : IEventStore
                 ? stream
                 : ImmutableArray<RecordedEvent>.Empty;
             return Task.FromResult(snapshot);
+        }
+    }
+
+    public async IAsyncEnumerable<RecordedEvent> ReadAllAsync(long fromPosition, [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        ImmutableArray<RecordedEvent>[] snapshot;
+
+        lock (_gate)
+        {
+            snapshot = _streams.Values.ToArray();
+        }
+
+        foreach (var e in snapshot
+                            .SelectMany(stream => stream)
+                            .Where(e => e.GlobalPosition > fromPosition)
+                            .OrderBy(e => e.GlobalPosition)
+                            )
+        {
+            ct.ThrowIfCancellationRequested();
+            yield return e;
         }
     }
 
@@ -67,4 +88,6 @@ public sealed class InMemoryEventStore : IEventStore
             return Task.FromResult(currentVerion + recorded.Length);
         }
     }
+
+
 }
