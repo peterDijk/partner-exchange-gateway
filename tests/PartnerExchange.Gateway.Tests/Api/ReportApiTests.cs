@@ -89,4 +89,20 @@ public class ReportApiTests
         var document = await factory.CreateClient().GetStringAsync("/openapi/v1.json");
         Assert.Contains("\"/reports\"", document, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task Double_post_is_handled_by_idempotency_guard()
+    {
+        await using var factory = new GatewayFactory();
+        var client = factory.CreateClient();
+
+        var firstResponseId = await client.SubmitAsync(Requests.ValidAlpha(), "key-1");
+        var retryResponseId = await client.SubmitAsync(Requests.ValidAlpha(), "key-1");
+        Assert.Equal(firstResponseId, retryResponseId);
+
+        var conflict = await client.PostReportAsync(Requests.ValidAlpha() with { Callsign = "ME"}, "key-1");
+
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+        
+    }
 }

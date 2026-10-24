@@ -24,12 +24,28 @@ public static class Requests
 
 public static class GatewayClientExtensions
 {
-    public static Task<HttpResponseMessage> PostReportAsync(this HttpClient client, SubmitReportRequest request) =>
-        client.PostAsJsonAsync("/reports", request, TestJson.Options);
-    
-    public static async Task<Guid> SubmitAsync(this HttpClient client, SubmitReportRequest request)
+    public static Task<HttpResponseMessage> PostReportAsync(this HttpClient client,
+        SubmitReportRequest request,
+        string? idempotencyKey = null)
     {
-        var response = await client.PostReportAsync(request);
+        // client.PostAsJsonAsync("/reports", request, TestJson.Options);
+        var message = new HttpRequestMessage(HttpMethod.Post, "/reports")
+        {
+            Content = JsonContent.Create(request, options: TestJson.Options)
+        };
+        if (idempotencyKey is not null)
+        {
+            message.Headers.Add("Idempotency-Key", idempotencyKey);
+        }
+
+        return client.SendAsync(message);
+    }
+    
+    public static async Task<Guid> SubmitAsync(this HttpClient client,
+        SubmitReportRequest request,
+        string? idempotencyKey = null)
+    {
+        var response = await client.PostReportAsync(request, idempotencyKey);
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<SubmitReportResponse>(TestJson.Options);
         return body!.MessageId;

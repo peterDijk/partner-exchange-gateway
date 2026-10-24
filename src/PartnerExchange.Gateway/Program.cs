@@ -34,6 +34,7 @@ builder.Services.AddSingleton<DeliveryCommands>();
 builder.Services.AddSingleton<RejectionLog>();
 builder.Services.AddSingleton<ReportIntake>();
 builder.Services.AddSingleton<ReportSubmissionValidator>();
+builder.Services.AddSingleton<IdempotencyGuard>();
 
 var app = builder.Build();
 

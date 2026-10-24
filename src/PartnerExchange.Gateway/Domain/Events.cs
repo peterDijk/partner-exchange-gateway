@@ -11,6 +11,7 @@ namespace PartnerExchange.Gateway.Domain;
 [JsonDerivedType(typeof(DeliveryReplayRequested), "delivery-replay-requested")]
 [JsonDerivedType(typeof(InboundReportAccepted), "inbound-report-accepted")]
 [JsonDerivedType(typeof(MessageRejected), "message-rejected")]
+[JsonDerivedType(typeof(SubmissionClaimed), "submission-claimed")]
 
 public abstract record DomainEvent;
 
@@ -67,3 +68,10 @@ public sealed record MessageRejected(
     IReadOnlyList<string> Reasons,
     DateTimeOffset At
 ) : DomainEvent;
+
+public sealed record SubmissionClaimed(
+    string IdempotencyKey,
+    Guid MessageId,
+    string BodyHash,
+    IReadOnlyList<string> Warnings,
+    DateTimeOffset At) : DomainEvent;

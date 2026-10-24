@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +36,7 @@ public static class ReportEndpoints
 
     private static async Task<Results<Accepted<SubmitReportResponse>, ValidationProblem, ProblemHttpResult>> SubmitReport(
         [FromBody] JsonElement body,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         ReportSubmissionValidator validator,
         ReportIntake intake,
         RejectionLog rejections,
@@ -59,7 +62,9 @@ public static class ReportEndpoints
             return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["$"] = [ex.Message] });
         }
 
-        var outcome = await intake.SubmitAsync(request, ct);
+        var bodyHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(body.GetRawText())));
+
+        var outcome = await intake.SubmitAsync(request, idempotencyKey, bodyHash, ct);
         return outcome switch
         {
             SubmitOutcome.Accepted a => TypedResults.Accepted(
@@ -72,6 +77,10 @@ public static class ReportEndpoints
                 statusCode: StatusCodes.Status422UnprocessableEntity,
                 title: "Report cannot be represented in the partner's PXF version",
                 extensions: new Dictionary<string, object?> { ["errors"] = t.Errors }),
+            SubmitOutcome.IdempotencyConflict idemConflict => TypedResults.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Key already stored with a different body content"
+            ),
             _ => throw new UnreachableException(),
         };
     }

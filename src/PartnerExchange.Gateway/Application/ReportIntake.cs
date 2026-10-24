@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-
 using Microsoft.Extensions.Options;
 using PartnerExchange.Contracts.Pxf;
 using PartnerExchange.Gateway.Api;
@@ -17,15 +15,22 @@ public abstract record SubmitOutcome
     public sealed record UnknownPartner(string PartnerId) : SubmitOutcome;
 
     public sealed record Untranslatable(IReadOnlyList<string> Errors) : SubmitOutcome;
+
+    public sealed record IdempotencyConflict() : SubmitOutcome;
 }
 
 public sealed class ReportIntake(
     DeliveryCommands commands,
     RejectionLog rejections,
     IOptions<GatewayOptions> options,
+    IdempotencyGuard idempotencyGuard,
     TimeProvider time)
 {
-    public async Task<SubmitOutcome> SubmitAsync(SubmitReportRequest request, CancellationToken ct)
+    public async Task<SubmitOutcome> SubmitAsync(
+        SubmitReportRequest request,
+        string? idempotencyKey,
+        string bodyHash,
+        CancellationToken ct)
     {
         var gateway = options.Value;
         if (!gateway.Partners.TryGetValue(request.PartnerId, out var partner))
@@ -45,6 +50,23 @@ public sealed class ReportIntake(
         {
             await rejections.RecordAsync("national", request.PartnerId, translation.Errors, ct);
             return new SubmitOutcome.Untranslatable(translation.Errors);
+        }
+
+        if (idempotencyKey is not null)
+        {
+            var claim = await idempotencyGuard.TryClaimAsync(idempotencyKey, bodyHash, messageId,
+                translation.Warnings, now, ct);
+            switch (claim)
+            {
+                case ClaimResult.Duplicate duplicate:
+                    return new SubmitOutcome.Accepted(duplicate.MessageId, duplicate.Warnings);
+
+                case ClaimResult.Conflict:
+                    return new SubmitOutcome.IdempotencyConflict();
+
+                case ClaimResult.Claimed:
+                    break;
+            }
         }
 
         var command = new AcceptReport(
