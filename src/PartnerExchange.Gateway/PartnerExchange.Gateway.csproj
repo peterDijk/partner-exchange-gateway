@@ -5,7 +5,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" Version="9.4.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.18.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Schemas\report-submission.schema.json" />
+    <EmbeddedResource Include="Schemas\report-submission.schema.json" LogicalName="report-submission.schema.json" />
   </ItemGroup>
 
 </Project>

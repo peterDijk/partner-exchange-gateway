@@ -15,7 +15,7 @@ Roadmap:
 - [x] PXF format and translators
 - [x] event-sourced domain
 - [x] event store
-- [ ] gateway API
+- [x] gateway API
 - [ ] outbound delivery + fault-injecting partner simulator
 - [ ] retries, circuit breaker, dead letters
 - [ ] signed inbound messages + idempotency
@@ -24,6 +24,10 @@ Roadmap:
 ## Running it
 
 `dotnet test` (needs the .NET 10 SDK).
+
+### API Documentation
+
+- http://localhost:5100/scalar/v1
 
 ## Coming from Scala
 
