@@ -9,7 +9,7 @@ PXF is invented for this demo. It is not, and does not imitate, any real NATO or
 
 ## Lines
 | # | Tag | Fields (v1) | Fields (v2) | Fields (v3)
-|---|-----|-------------|-------------|
+|---|-----|-------------|-------------| -------------
 | 1 | `PXF` | version `1` | version `2` | version `3` |
 | 2 | `H` | message id, observed-at, originator | same | same |
 | 3 | `U` | unit id, callsign | same | same |
